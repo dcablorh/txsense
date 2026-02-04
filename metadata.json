@@ -1,0 +1,5 @@
+{
+  "name": "TxSense",
+  "description": "An intelligent tool to decode and explain Sui blockchain transactions in plain English using Gemini AI and real-time RPC data.",
+  "requestFramePermissions": []
+}
