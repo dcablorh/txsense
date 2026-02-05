@@ -16,6 +16,19 @@ const App: React.FC = () => {
   const [pkgResult, setPkgResult] = useState<PackageExplanationResult | null>(null);
   const [loadingStep, setLoadingStep] = useState('');
 
+  // Load from URL query parameters on mount
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const txParam = params.get('tx');
+    const pkgParam = params.get('package');
+
+    if (txParam) {
+      handleExplain(undefined, txParam);
+    } else if (pkgParam) {
+      handleExplain(undefined, pkgParam);
+    }
+  }, []);
+
   // Countdown timer for rate limiting
   useEffect(() => {
     let timer: number | undefined;

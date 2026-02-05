@@ -12,6 +12,17 @@ const TransactionResult: React.FC<TransactionResultProps> = ({
   result,
   onReset,
 }) => {
+  const [copied, setCopied] = React.useState(false);
+
+  const copyReportLink = () => {
+    const baseUrl = window.location.origin;
+    const txDigest = raw.digest;
+    const reportLink = `${baseUrl}?tx=${encodeURIComponent(txDigest)}`;
+    navigator.clipboard.writeText(reportLink).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
   const {
     raw,
     summary,
@@ -342,6 +353,16 @@ const TransactionResult: React.FC<TransactionResultProps> = ({
         >
           Access On-Chain Ledger Record ↗
         </a>
+        <button
+          onClick={copyReportLink}
+          className={`btn-chunky text-white px-6 sm:px-16 py-3 sm:py-6 rounded-xl sm:rounded-[3rem] text-xs sm:text-3xl font-black w-full sm:w-auto transition-all ${
+            copied
+              ? "bg-[#9B6DFF] hover:bg-[#834dff]"
+              : "bg-[#FFD43B] text-[#1a1a1a] hover:bg-[#ffd43b]/90"
+          }`}
+        >
+          {copied ? "✨ COPIED!" : "📋 COPY REPORT LINK"}
+        </button>
         <button
           onClick={onReset}
           className="btn-chunky bg-[#2AC2FF] text-white px-6 sm:px-16 py-3 sm:py-6 rounded-xl sm:rounded-[3rem] text-xs sm:text-3xl font-black hover:bg-[#1fb8ff] w-full sm:w-auto"

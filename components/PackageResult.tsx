@@ -8,6 +8,16 @@ interface PackageResultProps {
 }
 
 const PackageResult: React.FC<PackageResultProps> = ({ result, onReset }) => {
+  const [copied, setCopied] = React.useState(false);
+
+  const copyReportLink = () => {
+    const baseUrl = window.location.origin;
+    const reportLink = `${baseUrl}?package=${encodeURIComponent(result.packageId)}`;
+    navigator.clipboard.writeText(reportLink).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
   return (
     <div className="space-y-8 sm:space-y-12 animate-in fade-in slide-in-from-bottom-10 duration-700">
       <section className="sticker-card p-8 sm:p-12 md:p-16 rounded-[2.5rem] sm:rounded-[4rem] bg-white">
@@ -51,10 +61,20 @@ const PackageResult: React.FC<PackageResultProps> = ({ result, onReset }) => {
          </div>
       </section>
 
-      <div className="flex justify-center py-8 sm:py-10">
+      <div className="flex justify-center gap-4 py-8 sm:py-10 flex-col sm:flex-row">
+         <button 
+           onClick={copyReportLink}
+           className={`btn-chunky text-white px-8 sm:px-16 py-4 sm:py-6 rounded-[2rem] sm:rounded-[3rem] text-lg sm:text-3xl font-black hover:opacity-90 transition-all ${
+             copied
+               ? "bg-[#9B6DFF] hover:bg-[#834dff]"
+               : "bg-[#FFD43B] text-[#1a1a1a] hover:bg-[#ffd43b]/90"
+           }`}
+         >
+           {copied ? "✨ COPIED!" : "📋 COPY REPORT"}
+         </button>
          <button 
            onClick={onReset}
-           className="btn-chunky bg-[#9B6DFF] text-white px-10 sm:px-16 py-4 sm:py-6 rounded-[2rem] sm:rounded-[3rem] text-xl sm:text-3xl font-black hover:bg-[#834dff] w-full sm:w-auto"
+           className="btn-chunky bg-[#9B6DFF] text-white px-8 sm:px-16 py-4 sm:py-6 rounded-[2rem] sm:rounded-[3rem] text-lg sm:text-3xl font-black hover:bg-[#834dff]"
          >
            DO IT AGAIN! 🧊
          </button>
