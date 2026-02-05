@@ -89,7 +89,7 @@ export const generateExplanation = async (
         4. SUINS NAMES: If a SuiNS name exists, show it as '👤 name.sui (0x1234...abcd)'. If not, use '👤 The Sender (0x1234...abcd)'.
         5. ADDRESS SNIPPETS: Show addresses as (0x1234...abcd) - first 6 and last 4 characters.
         6. STORY FLOW: Use markers like 'First', 'Then', 'Next', 'After that', 'Finally'.
-        7. EMOJIS: 👤 for people/wallets, 🏦 for apps/protocols, 💼 for objects, ⛽ for gas/fees, 🪙 for tokens.
+        7. EMOJIS: 👤 for people/wallets, 🏦 for apps/protocols, 💼 for objects, ⛽ for gas/fees,  for tokens.
         8. CLEAN NUMBERS: Round to clean numbers (e.g., '0.9 USDC' not '0.900000 USDC', '0.002 SUI' not '0.001847362 SUI').
 
         GOOD EXAMPLE: 'First, 👤 alice.sui (0x418c...9f67) initiated a transfer. Then, 0.9 USDC was split from the main balance using SplitCoins (separating a portion of coins). Next, the 0.9 USDC was sent to 👤 bob.sui (0x1eb7...0b11) via TransferObjects (moving tokens to another wallet). Finally, a ⛽ network fee of 0.002 SUI was paid.'
