@@ -6,6 +6,8 @@ import { checkRateLimit, recordRequest } from './services/rateLimitService';
 import { ExplanationResult, PackageExplanationResult, CoinMetadata } from './types';
 import TransactionResult from './components/TransactionResult';
 import PackageResult from './components/PackageResult';
+import LetterGlitch from './components/LetterGlitch';
+import SkeletonLoader from './components/SkeletonLoader';
 
 const App: React.FC = () => {
   const [input, setInput] = useState('');
@@ -213,18 +215,25 @@ const App: React.FC = () => {
         )}
 
         {loading && (
-          <div className="flex flex-col items-center justify-center py-12 sm:py-32 space-y-4 sm:space-y-10 animate-in fade-in">
-             <div className="sticker-card w-24 h-24 sm:w-48 sm:h-48 rounded-full flex items-center justify-center bg-white animate-bounce">
-                <span className="text-3xl sm:text-7xl">🍧</span>
+          <div className="space-y-6 sm:space-y-12">
+             {/* Large Glitch Text Area */}
+             <div className="w-full h-80 sm:h-[500px] max-w-4xl mx-auto sticker-card rounded-[2rem] sm:rounded-[4rem] bg-white p-6 sm:p-12 overflow-hidden">
+                <LetterGlitch 
+                  text={input.substring(0, 20).toUpperCase() || "DECODING HEX"} 
+                  glitchColors={['#2ac2ff', '#9b6dff', '#ffd43b']}
+                  glitchSpeed={40}
+                  centerVignette={true}
+                  outerVignette={true}
+                />
              </div>
-             <div className="text-center px-4">
-                <h2 className="text-sm sm:text-5xl font-black uppercase tracking-tight break-words">{loadingStep}</h2>
-                <div className="mt-3 sm:mt-6 flex gap-2 sm:gap-3 justify-center">
-                   <div className="w-2 h-2 sm:w-5 sm:h-5 rounded-full bg-[#2AC2FF] animate-ping"></div>
-                   <div className="w-2 h-2 sm:w-5 sm:h-5 rounded-full bg-[#9B6DFF] animate-ping" style={{animationDelay: '0.2s'}}></div>
-                   <div className="w-2 h-2 sm:w-5 sm:h-5 rounded-full bg-[#FFD43B] animate-ping" style={{animationDelay: '0.4s'}}></div>
-                </div>
+
+             {/* Loading Step Text */}
+             <div className="text-center px-4 mb-8 sm:mb-12">
+                <h2 className="text-sm sm:text-4xl font-black uppercase tracking-tight break-words text-slate-700">{loadingStep}</h2>
              </div>
+
+             {/* Skeleton Loader */}
+             <SkeletonLoader />
           </div>
         )}
 
