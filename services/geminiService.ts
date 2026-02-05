@@ -69,15 +69,15 @@ export const generateExplanation = async (
     
     Return a detailed JSON response:
     {
-      "summary": "A formal executive summary in 3rd person (e.g., 'The 👤 Sender (0x...) performed a liquidity addition to the Cetus SUI/USDC pool').",
+      "summary": "A formal executive summary in 3rd person (e.g., 'The 👤 Sender (0x1234...abcd) performed a liquidity addition to the Cetus SUI/USDC pool').",
       "technicalPlayByPlay": "A deep narrative Technical Breakdown following these EXACT rules:
-        1. PERSPECTIVE: ABSOLUTELY 3rd person only. Never use 'You'. Use 'The 👤 Sender (0x...)', 'The user', or 'The protocol'.
-        2. ADDRESS SNIPPETS: Always include the first 5 characters of addresses in parentheses, like (0x123ab...).
+        1. PERSPECTIVE: ABSOLUTELY 3rd person only. Never use 'You'. Use 'The 👤 Sender (0x1234...abcd)', 'The user', or 'The protocol'.
+        2. ADDRESS SNIPPETS: Always include the first 6 and last 4 characters of addresses in parentheses, like (0x1234...abcd).
         3. SEQUENCE MARKERS: Every step MUST start with markers like 'First', 'Subsequently', 'Following this', or 'Finally' to show the logical chain.
         4. EMOJIS: Use emojis for actors: 👤 Sender, 🏦 Protocol/Pool, 💼 Manager/Object, ⛽ Gas Payer, 🪙 Token.
         5. ROUNDING & UNITS: NEVER include small units like MIST. ALWAYS round amounts to clean, human-readable large units (e.g., '5.0 SUI' instead of '5.000000001 SUI' or '5,000,000,000 MIST'). If an amount is very small dust, describe it as 'a nominal amount'. Round to 2 or 3 significant figures.
         6. MOVE LOGIC: Reference specific Move function names from the commands list.",
-      "mermaidCode": "graph LR; User[\"👤 Sender (0x...)\"] -->|Calls Function| App[\"🏦 Protocol Name\"]; App -->|Updates| Obj[\"💼 Object (0x...)\"]; ... (Valid mermaid.js code flowchart)",
+      "mermaidCode": "graph LR; User[\"👤 Sender (0x1234...abcd)\"] -->|Calls Function| App[\"🏦 Protocol Name\"]; App -->|Updates| Obj[\"💼 Object (0x1234...abcd)\"]; ... (Valid mermaid.js code flowchart)",
       "protocol": "Main Brand Name (e.g. DeepBook, Cetus, Aftermath, Scallop)",
       "actionType": "Action Category (e.g. Swap, Liquidity, Borrow, Flash Loan)",
       "involvedParties": [
