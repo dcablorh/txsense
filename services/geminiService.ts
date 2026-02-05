@@ -38,27 +38,36 @@ const pruneTxData = (txData: SuiTransactionBlockResponse) => {
 };
 
 export const generateExplanation = async (
-  txData: SuiTransactionBlockResponse, 
-  coinMetadata: Record<string, CoinMetadata>
-): Promise<{ 
-  summary: string, 
+  txData: SuiTransactionBlockResponse,
+  coinMetadata: Record<string, CoinMetadata>,
+  suinsNames?: Map<string, string | null>
+): Promise<{
+  summary: string,
   technicalPlayByPlay: string,
-  mermaidCode: string, 
-  protocol?: string, 
+  mermaidCode: string,
+  protocol?: string,
   actionType?: string,
   involvedParties?: InvolvedParty[]
 }> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  
+
   const knownPackageInfo = KNOWN_PACKAGES.map(p => `- ID ${p.id} is the "${p.name}" protocol`).join('\n');
-  const tokenContext = Object.values(coinMetadata).map(m => 
+  const tokenContext = Object.values(coinMetadata).map(m =>
     `${m.id}: ${m.symbol} (decimals: ${m.decimals})`
   ).join('\n');
+
+  // Build SuiNS name context for addresses that have names
+  const suinsContext = suinsNames
+    ? Array.from(suinsNames.entries())
+        .filter(([_, name]) => name !== null)
+        .map(([addr, name]) => `- ${addr} is "${name}"`)
+        .join('\n')
+    : '';
 
   const minimalData = pruneTxData(txData);
 
   const prompt = `
-    Analyze this Sui Transaction and generate a high-fidelity, professional auditor report:
+    Analyze this Sui Transaction and explain what happened clearly:
     ${JSON.stringify(minimalData)}
 
     REAL PROTOCOL BRANDS (USE THESE NAMES):
@@ -66,49 +75,58 @@ export const generateExplanation = async (
 
     TOKEN METADATA:
     ${tokenContext}
-    
+    ${suinsContext ? `
+    SUINS NAMES (Use these human-readable names instead of raw addresses when available):
+    ${suinsContext}
+    ` : ''}
     Return a detailed JSON response:
     {
-      "summary": "A formal executive summary in 3rd person (e.g., 'The 👤 Sender (0x1234...abcd) performed a liquidity addition to the Cetus SUI/USDC pool').",
-      "technicalPlayByPlay": "A deep narrative Technical Breakdown following these EXACT rules:
-        1. PERSPECTIVE: ABSOLUTELY 3rd person only. Never use 'You'. Use 'The 👤 Sender (0x1234...abcd)', 'The user', or 'The protocol'.
-        2. ADDRESS SNIPPETS: Always include the first 6 and last 4 characters of addresses in parentheses, like (0x1234...abcd).
-        3. SEQUENCE MARKERS: Every step MUST start with markers like 'First', 'Subsequently', 'Following this', or 'Finally' to show the logical chain.
-        4. EMOJIS: Use emojis for actors: 👤 Sender, 🏦 Protocol/Pool, 💼 Manager/Object, ⛽ Gas Payer, 🪙 Token.
-        5. ROUNDING & UNITS: NEVER include small units like MIST. ALWAYS round amounts to clean, human-readable large units (e.g., '5.0 SUI' instead of '5.000000001 SUI' or '5,000,000,000 MIST'). If an amount is very small dust, describe it as 'a nominal amount'. Round to 2 or 3 significant figures.
-        6. MOVE LOGIC: Reference specific Move function names from the commands list.",
-      "mermaidCode": "graph LR; User[\"👤 Sender (0x1234...abcd)\"] -->|Calls Function| App[\"🏦 Protocol Name\"]; App -->|Updates| Obj[\"💼 Object (0x1234...abcd)\"]; ... (Valid mermaid.js code flowchart)",
-      "protocol": "Main Brand Name (e.g. DeepBook, Cetus, Aftermath, Scallop)",
-      "actionType": "Action Category (e.g. Swap, Liquidity, Borrow, Flash Loan)",
+      "summary": "A clear summary of what happened. Use SuiNS names like: '👤 alice.sui (0x1234...abcd) sent 0.9 USDC to 👤 bob.sui (0x5678...efgh)'. Keep technical terms but add simple explanations in brackets.",
+      "technicalPlayByPlay": "A step-by-step breakdown following these EXACT rules:
+        1. NEVER USE 'THEY' OR 'THEIR': Always refer to '👤 The Sender', '👤 alice.sui', or 'The user'. Never use plural pronouns for a single person.
+        2. PASSIVE VOICE FOR SYSTEM ACTIONS: When the blockchain/system does something, use passive voice. Say 'The coins were split' NOT 'they split the coins'. Say 'The transaction was processed' NOT 'they processed'.
+        3. TECHNICAL TERMS WITH EXPLANATIONS: Keep Sui terms but add layman explanation in brackets. Example: 'SplitCoins (dividing the balance into smaller parts)' or 'TransferObjects (sending items to another wallet)'.
+        4. SUINS NAMES: If a SuiNS name exists, show it as '👤 name.sui (0x1234...abcd)'. If not, use '👤 The Sender (0x1234...abcd)'.
+        5. ADDRESS SNIPPETS: Show addresses as (0x1234...abcd) - first 6 and last 4 characters.
+        6. STORY FLOW: Use markers like 'First', 'Then', 'Next', 'After that', 'Finally'.
+        7. EMOJIS: 👤 for people/wallets, 🏦 for apps/protocols, 💼 for objects, ⛽ for gas/fees, 🪙 for tokens.
+        8. CLEAN NUMBERS: Round to clean numbers (e.g., '0.9 USDC' not '0.900000 USDC', '0.002 SUI' not '0.001847362 SUI').
+
+        GOOD EXAMPLE: 'First, 👤 alice.sui (0x418c...9f67) initiated a transfer. Then, 0.9 USDC was split from the main balance using SplitCoins (separating a portion of coins). Next, the 0.9 USDC was sent to 👤 bob.sui (0x1eb7...0b11) via TransferObjects (moving tokens to another wallet). Finally, a ⛽ network fee of 0.002 SUI was paid.'
+
+        BAD EXAMPLE: 'They split their coins and sent them.' (Don't use they/their)",
+      "mermaidCode": "graph LR; User[\"👤 alice.sui (0x1234...abcd)\"] -->|Sends| App[\"🏦 Protocol\"]; App -->|Transfers| Receiver[\"👤 bob.sui\"]; ... (Valid mermaid.js flowchart)",
+      "protocol": "Protocol Name (e.g. Sui Framework, DeepBook, Cetus)",
+      "actionType": "Action Type (e.g. Transfer, Swap, Deposit, Borrow)",
       "involvedParties": [
         {
-          "address": "0x...", 
-          "role": "Role (e.g. Sender, Gas Payer, Liquidity Pool)", 
-          "label": "REAL BRAND NAME (e.g. DeepBook V3, User Wallet)"
+          "address": "0x...",
+          "role": "Role (e.g. Sender, Receiver, Protocol)",
+          "label": "SuiNS name or Protocol name (e.g. alice.sui, Cetus)"
         }
       ]
     }
-    
-    CRITICAL: Tone must be authoritative and forensic. No fluff. Accurate branding is mandatory.
+
+    CRITICAL: Never use 'they/their' for individuals. Use passive voice for system actions. Keep technical terms but explain them in brackets.
   `;
 
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-3-flash-preview',
       contents: prompt,
-      config: { 
+      config: {
         responseMimeType: "application/json",
         thinkingConfig: { thinkingBudget: 0 },
-        systemInstruction: "You are a senior blockchain forensic auditor. You translate technical Sui transaction data into professional 3rd-person reports. You prioritize branding, sequence of events, and large-unit rounding for tokens."
+        systemInstruction: "You translate Sui transactions into clear explanations. Keep technical terms but add simple explanations in brackets. Never use 'they/their' for individuals - use the person's name or 'The Sender'. Use passive voice when describing system actions (e.g., 'coins were split' not 'they split coins')."
       }
     });
     return JSON.parse(response.text || '{}');
   } catch (error) {
     console.error("Gemini Error:", error);
-    return { 
-      summary: "Transaction analysis completed.",
-      technicalPlayByPlay: "The sender successfully interacted with the Sui network. Subsequently, token balances were adjusted according to the protocol logic.",
-      mermaidCode: "graph LR; User[\"👤 Sender\"]-->Protocol[\"🏦 Protocol\"]; Protocol-->Result[\"✨ Success\"];"
+    return {
+      summary: "This transaction went through successfully on the Sui network.",
+      technicalPlayByPlay: "The sender completed a transaction on Sui. Then, some token balances were updated based on what the app did.",
+      mermaidCode: "graph LR; User[\"👤 Sender\"]-->App[\"🏦 App\"]; App-->Result[\"✨ Done!\"];"
     };
   }
 };

@@ -60,6 +60,7 @@ export interface InvolvedParty {
   address: string;
   role: string;
   label?: string;
+  suinsName?: string | null;
 }
 
 export interface ExplanationResult {
@@ -71,6 +72,7 @@ export interface ExplanationResult {
   actionType?: string;
   coinMetadata: Record<string, CoinMetadata>;
   involvedParties?: InvolvedParty[];
+  senderSuinsName?: string | null;
 }
 
 export interface PackageExplanationResult {

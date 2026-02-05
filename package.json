@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@google/genai": "^1.39.0",
+    "@mysten/sui": "^2.2.0",
+    "@mysten/suins": "^1.0.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4"
   },
