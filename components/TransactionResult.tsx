@@ -2,6 +2,7 @@ import React from "react";
 import { ExplanationResult, CoinMetadata, InvolvedParty } from "../types";
 import { EXPLORER_URL, MIST_PER_SUI } from "../constants";
 import MermaidChart from "./MermaidChart";
+import CoinImage from "./CoinImage";
 
 interface TransactionResultProps {
   result: ExplanationResult;
@@ -42,6 +43,144 @@ const TransactionResult: React.FC<TransactionResultProps> = ({
     const parts = coinType.split("::");
     const fallbackSymbol = parts[parts.length - 1] || "COIN";
     return { symbol: fallbackSymbol, name: "Unregistered Asset" };
+  };
+
+  // Enhanced summary renderer with highlighting and coin images
+  const renderEnhancedSummary = (text: string): React.ReactNode[] => {
+    const result: React.ReactNode[] = [];
+    let lastIndex = 0;
+    let keyIndex = 0;
+
+    // Combined regex to match all patterns we want to highlight
+    // Order matters - more specific patterns first
+    const patterns = [
+      // SuiNS names: word.sui
+      { regex: /(\w+\.sui)/g, type: 'suins' },
+      // Addresses in parentheses: (0x1234...abcd)
+      { regex: /\((0x[a-fA-F0-9]{4}\.{3}[a-fA-F0-9]{4})\)/g, type: 'address' },
+      // Coin amounts with symbols: 1.81 USDC, 0.006 SUI, 1.0 eSUI
+      { regex: /(\d+(?:,\d{3})*(?:\.\d+)?)\s+(SUI|USDC|USDT|ETH|BTC|eSUI|WETH|WBTC|CETUS|DEEP|WAL|SCA)/gi, type: 'amount' },
+      // Standalone coin symbols (word boundaries)
+      { regex: /\b(SUI|USDC|USDT|ETH|BTC|eSUI|WETH|WBTC|CETUS|DEEP|WAL|SCA)\b/g, type: 'coin' },
+      // Emojis
+      { regex: /(👤|🏦|⛽|💼|🪙|⚡|✨|❌)/g, type: 'emoji' },
+    ];
+
+    // Find all matches and their positions
+    interface Match {
+      index: number;
+      length: number;
+      text: string;
+      type: string;
+      groups?: string[];
+    }
+    
+    const allMatches: Match[] = [];
+
+    for (const { regex, type } of patterns) {
+      let match;
+      const re = new RegExp(regex.source, regex.flags);
+      while ((match = re.exec(text)) !== null) {
+        // Check if this position is already matched by a more specific pattern
+        const overlaps = allMatches.some(m => 
+          (match!.index >= m.index && match!.index < m.index + m.length) ||
+          (m.index >= match!.index && m.index < match!.index + match![0].length)
+        );
+        if (!overlaps) {
+          allMatches.push({
+            index: match.index,
+            length: match[0].length,
+            text: match[0],
+            type,
+            groups: match.slice(1)
+          });
+        }
+      }
+    }
+
+    // Sort matches by position
+    allMatches.sort((a, b) => a.index - b.index);
+
+    // Build result
+    for (const match of allMatches) {
+      // Add text before this match
+      if (match.index > lastIndex) {
+        result.push(text.slice(lastIndex, match.index));
+      }
+
+      // Add highlighted match
+      switch (match.type) {
+        case 'suins':
+          result.push(
+            <span key={keyIndex++} className="bg-[#2AC2FF]/20 px-1.5 py-0.5 rounded-md font-bold text-[#2AC2FF] border border-[#2AC2FF]/40">
+              {match.text}
+            </span>
+          );
+          break;
+        case 'address':
+          result.push(
+            <span key={keyIndex++} className="bg-slate-200/80 px-1.5 py-0.5 rounded-md font-mono text-[10px] sm:text-xs text-slate-600 border border-slate-300">
+              {match.text}
+            </span>
+          );
+          break;
+        case 'amount': {
+          const amount = match.groups?.[0] || '';
+          const symbol = match.groups?.[1] || '';
+          const coinMeta = (Object.values(coinMetadata) as CoinMetadata[]).find(m =>
+            m.symbol.toUpperCase() === symbol.toUpperCase()
+          );
+          result.push(
+            <span key={keyIndex++} className="inline-flex items-center gap-1 bg-[#FFD43B]/25 px-1.5 py-0.5 rounded-md font-bold text-amber-700 border border-[#FFD43B]/50">
+              <CoinImage
+                iconUrl={coinMeta?.iconUrl}
+                symbol={symbol}
+                size="sm"
+                className="flex-shrink-0"
+              />
+              {amount} {symbol}
+            </span>
+          );
+          break;
+        }
+        case 'coin': {
+          const symbol = match.groups?.[0] || match.text;
+          const coinMeta = (Object.values(coinMetadata) as CoinMetadata[]).find(m =>
+            m.symbol.toUpperCase() === symbol.toUpperCase()
+          );
+          result.push(
+            <span key={keyIndex++} className="inline-flex items-center gap-1 bg-[#FFD43B]/25 px-1.5 py-0.5 rounded-md font-bold text-amber-700 border border-[#FFD43B]/50">
+              <CoinImage
+                iconUrl={coinMeta?.iconUrl}
+                symbol={symbol}
+                size="sm"
+                className="flex-shrink-0"
+              />
+              {symbol}
+            </span>
+          );
+          break;
+        }
+        case 'emoji':
+          result.push(
+            <span key={keyIndex++} className="text-xl">
+              {match.text}
+            </span>
+          );
+          break;
+        default:
+          result.push(match.text);
+      }
+
+      lastIndex = match.index + match.length;
+    }
+
+    // Add remaining text
+    if (lastIndex < text.length) {
+      result.push(text.slice(lastIndex));
+    }
+
+    return result;
   };
 
   return (
@@ -88,9 +227,9 @@ const TransactionResult: React.FC<TransactionResultProps> = ({
                 <h4 className="text-[9px] sm:text-xs font-black uppercase tracking-widest text-slate-400 mb-2">
                   Executive Summary
                 </h4>
-                <p className="text-sm sm:text-2xl md:text-3xl leading-snug font-black text-slate-800 tracking-tight">
-                  {summary}
-                </p>
+                <div className="text-sm sm:text-2xl md:text-3xl leading-snug font-black text-slate-800 tracking-tight">
+                  {renderEnhancedSummary(summary)}
+                </div>
               </div>
 
               <div className="h-[2px] w-full bg-slate-200 mb-6 sm:mb-10"></div>
@@ -109,7 +248,7 @@ const TransactionResult: React.FC<TransactionResultProps> = ({
                               key={i}
                               className="pl-3 sm:pl-6 border-l-4 border-[#2AC2FF]/30 hover:border-[#2AC2FF] transition-colors"
                             >
-                              {line}
+                              {renderEnhancedSummary(line)}
                             </p>
                           ),
                       )
@@ -256,12 +395,17 @@ const TransactionResult: React.FC<TransactionResultProps> = ({
                     >
                       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-0.5 sm:gap-2">
                         <div className="min-w-0 flex-1 w-full">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5 sm:gap-2">
+                            <CoinImage
+                              iconUrl={meta?.iconUrl}
+                              symbol={display.symbol}
+                              size="md"
+                            />
                             <span className="font-black text-[9px] sm:text-xl block truncate">
                               {display.symbol}
                             </span>
                           </div>
-                          <span className="text-[5px] sm:text-[10px] uppercase font-black opacity-30 truncate block w-full group-hover:opacity-100 transition-opacity">
+                          <span className="text-[5px] sm:text-[10px] uppercase font-black opacity-30 truncate block w-full group-hover:opacity-100 transition-opacity pl-6 sm:pl-10">
                             {bc.coinType}
                           </span>
                         </div>

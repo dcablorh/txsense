@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { identifyInput, fetchTransactionDetails, fetchPackageModules, fetchCoinMetadata, fetchRandomTransactionDigest } from './services/suiService';
+import { fetchAftermathCoinMetadatas } from './services/aftermathService';
 import { generateExplanation, generatePackageExplanation } from './services/geminiService';
 import { checkRateLimit, recordRequest } from './services/rateLimitService';
 import { resolveSuinsNames } from './services/suinsService';
@@ -67,10 +68,30 @@ const App: React.FC = () => {
         const coinMetadata: Record<string, CoinMetadata> = {};
         const uniqueCoins = Array.from(new Set(txData.balanceChanges?.map(bc => bc.coinType) || []));
 
-        await Promise.all(uniqueCoins.map(async (coinType) => {
-          const meta = await fetchCoinMetadata(coinType);
-          if (meta) coinMetadata[coinType] = meta;
-        }));
+        // Fetch from Sui RPC (for decimals) and Aftermath (for iconUrl) in parallel
+        const [aftermathMeta] = await Promise.all([
+          fetchAftermathCoinMetadatas(uniqueCoins),
+          Promise.all(uniqueCoins.map(async (coinType) => {
+            const meta = await fetchCoinMetadata(coinType);
+            if (meta) coinMetadata[coinType] = meta;
+          }))
+        ]);
+
+        // Merge Aftermath iconUrl into metadata
+        for (const [coinType, afMeta] of aftermathMeta) {
+          if (coinMetadata[coinType]) {
+            coinMetadata[coinType].iconUrl = afMeta.iconUrl || coinMetadata[coinType].iconUrl;
+          } else {
+            coinMetadata[coinType] = {
+              id: coinType,
+              name: afMeta.name,
+              symbol: afMeta.symbol,
+              decimals: afMeta.decimals,
+              description: '',
+              iconUrl: afMeta.iconUrl,
+            };
+          }
+        }
 
         // Resolve SuiNS names BEFORE generating explanation so AI can use them
         setLoadingStep('Looking up SuiNS names... 🏷️');
