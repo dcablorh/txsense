@@ -8,8 +8,6 @@ import { resolveSuinsNames } from './services/suinsService';
 import { ExplanationResult, PackageExplanationResult, CoinMetadata } from './types';
 import TransactionResult from './components/TransactionResult';
 import PackageResult from './components/PackageResult';
-import LetterGlitch from './components/LetterGlitch';
-import SkeletonLoader from './components/SkeletonLoader';
 
 const App: React.FC = () => {
   const [input, setInput] = useState('');
@@ -253,25 +251,53 @@ const App: React.FC = () => {
         )}
 
         {loading && (
-          <div className="space-y-6 sm:space-y-12">
-             {/* Large Glitch Text Area */}
-             <div className="w-full h-80 sm:h-[500px] max-w-4xl mx-auto sticker-card rounded-[2rem] sm:rounded-[4rem] bg-white p-6 sm:p-12 overflow-hidden">
-                <LetterGlitch 
-                  text={input.substring(0, 20).toUpperCase() || "DECODING HEX"} 
-                  glitchColors={['#2ac2ff', '#9b6dff', '#ffd43b']}
-                  glitchSpeed={40}
-                  centerVignette={true}
-                  outerVignette={true}
-                />
-             </div>
+          <div className="space-y-8 sm:space-y-12 animate-in fade-in duration-500">
+            {/* Bouncing Popsicle Container */}
+            <div className="flex justify-center">
+              <div className="sticker-card rounded-full bg-white p-8 sm:p-16 aspect-square flex items-center justify-center max-w-sm sm:max-w-lg">
+                <span className="text-9xl sm:text-[200px] animate-bounce">🍧</span>
+              </div>
+            </div>
 
-             {/* Loading Step Text */}
-             <div className="text-center px-4 mb-8 sm:mb-12">
-                <h2 className="text-sm sm:text-4xl font-black uppercase tracking-tight break-words text-slate-700">{loadingStep}</h2>
-             </div>
+            {/* Loading Step Text */}
+            <div className="text-center px-4">
+              <h2 className="text-lg sm:text-4xl font-black uppercase tracking-tight text-slate-700 min-h-12 sm:min-h-16">
+                {loadingStep}
+              </h2>
+            </div>
 
-             {/* Skeleton Loader */}
-             <SkeletonLoader />
+            {/* Pinging Dots */}
+            <div className="flex justify-center gap-4 sm:gap-6">
+              <div 
+                className="w-4 sm:w-6 h-4 sm:h-6 rounded-full bg-[#2AC2FF]"
+                style={{
+                  animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite'
+                }}
+              />
+              <div 
+                className="w-4 sm:w-6 h-4 sm:h-6 rounded-full bg-[#9B6DFF]"
+                style={{
+                  animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite',
+                  animationDelay: '0.2s'
+                }}
+              />
+              <div 
+                className="w-4 sm:w-6 h-4 sm:h-6 rounded-full bg-[#FFD43B]"
+                style={{
+                  animation: 'ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite',
+                  animationDelay: '0.4s'
+                }}
+              />
+            </div>
+
+            <style>{`
+              @keyframes ping {
+                75%, 100% {
+                  transform: scale(2);
+                  opacity: 0;
+                }
+              }
+            `}</style>
           </div>
         )}
 
