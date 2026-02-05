@@ -2,6 +2,9 @@
 import { SUI_RPC_URL } from '../constants';
 import { SuiTransactionBlockResponse, InputType, CoinMetadata } from '../types';
 
+// In-memory cache to speed up repeated lookups
+const metadataCache = new Map<string, CoinMetadata>();
+
 export const fetchTransactionDetails = async (digest: string): Promise<SuiTransactionBlockResponse> => {
   const response = await fetch(SUI_RPC_URL, {
     method: 'POST',
@@ -31,6 +34,11 @@ export const fetchTransactionDetails = async (digest: string): Promise<SuiTransa
 };
 
 export const fetchCoinMetadata = async (coinType: string): Promise<CoinMetadata | null> => {
+  // Return from cache if available
+  if (metadataCache.has(coinType)) {
+    return metadataCache.get(coinType)!;
+  }
+
   const response = await fetch(SUI_RPC_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -44,7 +52,9 @@ export const fetchCoinMetadata = async (coinType: string): Promise<CoinMetadata 
 
   const data = await response.json();
   if (data.result) {
-    return { ...data.result, id: coinType };
+    const meta = { ...data.result, id: coinType };
+    metadataCache.set(coinType, meta);
+    return meta;
   }
   return null;
 };
@@ -116,12 +126,9 @@ export const identifyInput = (input: string): { type: InputType; id: string | nu
 
   let cleanInput = trimmed;
   try {
-    // Attempt to handle URL-like inputs
     if (trimmed.startsWith('http')) {
       const url = new URL(trimmed);
       const pathParts = url.pathname.split('/').filter(Boolean);
-      
-      // Look for known keywords in path
       const txIndex = pathParts.findIndex(p => p === 'txblock' || p === 'tx');
       const pkgIndex = pathParts.findIndex(p => p === 'package' || p === 'object');
       
@@ -130,13 +137,10 @@ export const identifyInput = (input: string): { type: InputType; id: string | nu
       } else if (pkgIndex !== -1 && pathParts[pkgIndex + 1]) {
         cleanInput = pathParts[pkgIndex + 1];
       } else if (pathParts.length > 0) {
-        // Fallback: last segment of URL
         cleanInput = pathParts[pathParts.length - 1];
       }
     }
-  } catch (e) {
-    // Not a valid URL, treat as raw ID
-  }
+  } catch (e) {}
 
   if (packageRegex.test(cleanInput)) {
     return { type: 'package', id: cleanInput };

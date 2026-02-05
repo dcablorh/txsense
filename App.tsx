@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { identifyInput, fetchTransactionDetails, fetchPackageModules, fetchCoinMetadata, fetchRandomTransactionDigest } from './services/suiService';
 import { generateExplanation, generatePackageExplanation } from './services/geminiService';
+import { checkRateLimit, recordRequest } from './services/rateLimitService';
 import { ExplanationResult, PackageExplanationResult, CoinMetadata } from './types';
 import TransactionResult from './components/TransactionResult';
 import PackageResult from './components/PackageResult';
@@ -10,17 +11,44 @@ const App: React.FC = () => {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [rateLimitWait, setRateLimitWait] = useState<number>(0);
   const [txResult, setTxResult] = useState<ExplanationResult | null>(null);
   const [pkgResult, setPkgResult] = useState<PackageExplanationResult | null>(null);
   const [loadingStep, setLoadingStep] = useState('');
 
+  // Countdown timer for rate limiting
+  useEffect(() => {
+    let timer: number | undefined;
+    if (rateLimitWait > 0 && error === 'RATE_LIMIT') {
+      timer = window.setInterval(() => {
+        setRateLimitWait((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            setError(null); // Auto-clear error when timer reaches 0
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [rateLimitWait, error]);
+
   const handleExplain = async (e?: React.FormEvent, overrideInput?: string) => {
     if (e) e.preventDefault();
-    const targetInput = overrideInput || input;
+    const targetInput = (overrideInput || input).trim();
     const { type, id } = identifyInput(targetInput);
 
     if (!id) {
       setError('Oops! That doesn\'t look right. Try a Sui link! 🧐');
+      return;
+    }
+
+    // Rate Limit Check
+    const limitStatus = checkRateLimit();
+    if (!limitStatus.allowed) {
+      setRateLimitWait(limitStatus.waitTimeSeconds);
+      setError('RATE_LIMIT');
       return;
     }
 
@@ -46,6 +74,9 @@ const App: React.FC = () => {
         setLoadingStep('Brewing the story... ☕');
         const explanation = await generateExplanation(txData, coinMetadata);
         
+        // Record successful request for rate limiting
+        recordRequest();
+
         setTxResult({
           raw: txData,
           summary: explanation.summary,
@@ -61,6 +92,10 @@ const App: React.FC = () => {
         const modules = await fetchPackageModules(id);
         setLoadingStep('Analyzing the logic... 🪄');
         const pkgExp = await generatePackageExplanation(id, modules);
+        
+        // Record successful request for rate limiting
+        recordRequest();
+        
         setPkgResult(pkgExp);
       }
     } catch (err: any) {
@@ -72,6 +107,13 @@ const App: React.FC = () => {
   };
 
   const handleRandom = async () => {
+    const limitStatus = checkRateLimit();
+    if (!limitStatus.allowed) {
+      setRateLimitWait(limitStatus.waitTimeSeconds);
+      setError('RATE_LIMIT');
+      return;
+    }
+
     setLoading(true);
     setLoadingStep('Rolling the dice... 🎲');
     try {
@@ -89,6 +131,7 @@ const App: React.FC = () => {
     setTxResult(null);
     setPkgResult(null);
     setError(null);
+    setRateLimitWait(0);
   };
 
   return (
@@ -118,7 +161,7 @@ const App: React.FC = () => {
       </header>
 
       <main className="max-w-4xl mx-auto">
-        {!txResult && !pkgResult && !loading && (
+        {!txResult && !pkgResult && !loading && !error && (
           <div className="space-y-6 sm:space-y-12 animate-in fade-in slide-in-from-bottom-10 duration-700">
             {/* Main Search Input */}
             <div className="sticker-card p-1.5 sm:p-3 rounded-xl sm:rounded-[3.5rem] bg-white">
@@ -172,7 +215,25 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {error && (
+        {error === 'RATE_LIMIT' && (
+          <div className="sticker-card bg-[#FFD43B] p-6 sm:p-16 rounded-xl sm:rounded-[4rem] text-black animate-in zoom-in mx-1 sm:mx-0 text-center">
+            <span className="text-4xl sm:text-8xl block mb-4 sm:mb-8 animate-pulse">🧊</span>
+            <h3 className="text-lg sm:text-6xl font-black uppercase mb-2 sm:mb-6 tracking-tight">Whoa, Slow Down!</h3>
+            <p className="text-xs sm:text-2xl font-bold mb-6 sm:mb-12 opacity-80 leading-relaxed">
+              Chill bruh you’re sniffing the chain too fast. <br className="hidden sm:block"/>
+              Take a breath! You can go again in <br/>
+              <span className="text-[#9B6DFF] text-3xl sm:text-6xl font-black tabular-nums">{rateLimitWait} seconds</span>.
+            </p>
+            <button 
+              onClick={handleReset} 
+              className="btn-chunky bg-[#1a1a1a] text-white px-8 sm:px-16 py-3 sm:py-6 rounded-xl sm:rounded-[3rem] font-black uppercase text-xs sm:text-2xl w-full sm:w-auto"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+
+        {error && error !== 'RATE_LIMIT' && (
           <div className="sticker-card bg-[#9B6DFF] p-5 sm:p-12 rounded-xl sm:rounded-[4rem] text-white animate-in zoom-in mx-1 sm:mx-0">
             <h3 className="text-lg sm:text-5xl font-black uppercase mb-2 sm:mb-6">Wait! ⛈️</h3>
             <p className="text-xs sm:text-2xl font-bold mb-5 sm:mb-10 opacity-90">{error}</p>
