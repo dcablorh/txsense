@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { identifyInput, fetchTransactionDetails, fetchPackageModules, fetchCoinMetadata, fetchRandomTransactionDigest } from './services/suiService';
 import { generateExplanation, generatePackageExplanation } from './services/geminiService';
 import { checkRateLimit, recordRequest } from './services/rateLimitService';
+import { resolveSuinsNames } from './services/suinsService';
 import { ExplanationResult, PackageExplanationResult, CoinMetadata } from './types';
 import TransactionResult from './components/TransactionResult';
 import PackageResult from './components/PackageResult';
@@ -80,15 +81,34 @@ const App: React.FC = () => {
         setLoadingStep('Scaling token units... 🪙');
         const coinMetadata: Record<string, CoinMetadata> = {};
         const uniqueCoins = Array.from(new Set(txData.balanceChanges?.map(bc => bc.coinType) || []));
-        
+
         await Promise.all(uniqueCoins.map(async (coinType) => {
           const meta = await fetchCoinMetadata(coinType);
           if (meta) coinMetadata[coinType] = meta;
         }));
 
+        // Resolve SuiNS names BEFORE generating explanation so AI can use them
+        setLoadingStep('Looking up SuiNS names... 🏷️');
+        const addressesToResolve = [
+          txData.transaction?.data.sender,
+          txData.transaction?.data.gasData.owner,
+          ...(txData.balanceChanges?.map(bc => {
+            const owner = bc.owner;
+            return typeof owner === 'object' ? Object.values(owner)[0] : owner;
+          }) || [])
+        ].filter((addr): addr is string => !!addr && addr.startsWith('0x'));
+
+        const suinsNames = await resolveSuinsNames(addressesToResolve);
+
         setLoadingStep('Brewing the story... ☕');
-        const explanation = await generateExplanation(txData, coinMetadata);
-        
+        const explanation = await generateExplanation(txData, coinMetadata, suinsNames);
+
+        // Enrich involved parties with SuiNS names
+        const enrichedParties = explanation.involvedParties?.map(party => ({
+          ...party,
+          suinsName: suinsNames.get(party.address) || null
+        }));
+
         // Record successful request for rate limiting
         recordRequest();
 
@@ -99,8 +119,9 @@ const App: React.FC = () => {
           mermaidCode: explanation.mermaidCode,
           protocol: explanation.protocol,
           actionType: explanation.actionType,
-          involvedParties: explanation.involvedParties,
-          coinMetadata
+          involvedParties: enrichedParties,
+          coinMetadata,
+          senderSuinsName: suinsNames.get(txData.transaction?.data.sender || '') || null
         });
       } else if (type === 'package') {
         setLoadingStep('Unboxing Move code... 🎁');
