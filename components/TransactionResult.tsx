@@ -244,12 +244,12 @@ const TransactionResult: React.FC<TransactionResultProps> = ({
                       technicalPlayByPlay.split("\n").map(
                         (line, i) =>
                           line.trim() && (
-                            <p
+                            <div
                               key={i}
                               className="pl-3 sm:pl-6 border-l-4 border-[#2AC2FF]/30 hover:border-[#2AC2FF] transition-colors"
                             >
                               {renderEnhancedSummary(line)}
-                            </p>
+                            </div>
                           ),
                       )
                     ) : (

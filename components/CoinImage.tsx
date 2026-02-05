@@ -55,20 +55,20 @@ const CoinImage: React.FC<CoinImageProps> = ({
 
   if (showFallback) {
     return (
-      <div
-        className={`${sizeClasses[size]} ${getColorFromSymbol(symbol)} rounded-full flex items-center justify-center flex-shrink-0 border border-[#1a1a1a]/10 ${className}`}
+      <span
+        className={`${sizeClasses[size]} ${getColorFromSymbol(symbol)} rounded-full inline-flex items-center justify-center flex-shrink-0 border border-[#1a1a1a]/10 ${className}`}
       >
         <span className={`${textSizes[size]} font-black text-white`}>
           {getInitials(symbol)}
         </span>
-      </div>
+      </span>
     );
   }
 
   return (
-    <div className={`${sizeClasses[size]} relative flex-shrink-0 ${className}`}>
+    <span className={`${sizeClasses[size]} relative inline-flex flex-shrink-0 ${className}`}>
       {!imageLoaded && (
-        <div
+        <span
           className={`absolute inset-0 ${getColorFromSymbol(symbol)} rounded-full animate-pulse`}
         />
       )}
@@ -82,7 +82,7 @@ const CoinImage: React.FC<CoinImageProps> = ({
           imageLoaded ? "opacity-100" : "opacity-0"
         } transition-opacity duration-200`}
       />
-    </div>
+    </span>
   );
 };
 
