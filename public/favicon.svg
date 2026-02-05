@@ -1,0 +1,21 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Blue circle background -->
+  <circle cx="100" cy="100" r="95" fill="#2ac2ff" stroke="#1a1a1a" stroke-width="4"/>
+  
+  <!-- Magnifying glass -->
+  <g transform="translate(60, 50)">
+    <!-- Handle -->
+    <line x1="50" y1="50" x2="75" y2="75" stroke="#1a1a1a" stroke-width="6" stroke-linecap="round"/>
+    <!-- Glass circle -->
+    <circle cx="35" cy="35" r="28" fill="none" stroke="#1a1a1a" stroke-width="6"/>
+  </g>
+  
+  <!-- Hexagon pattern inside glass -->
+  <g transform="translate(100, 100)" fill="#ffd43b" opacity="0.9">
+    <polygon points="0,-15 13,-7.5 13,7.5 0,15 -13,7.5 -13,-7.5"/>
+  </g>
+  
+  <!-- Question mark -->
+  <circle cx="140" cy="65" r="12" fill="#9b6dff" stroke="#1a1a1a" stroke-width="2"/>
+  <text x="140" y="72" font-size="18" font-weight="bold" fill="#1a1a1a" text-anchor="middle">?</text>
+</svg>

@@ -241,7 +241,7 @@ const TransactionResult: React.FC<TransactionResultProps> = ({
                     Math.pow(10, decimals);
                   const formatted = scaledValue.toLocaleString(undefined, {
                     minimumFractionDigits: 0,
-                    maximumFractionDigits: 2,
+                    maximumFractionDigits: 6,
                   });
 
                   if (scaledValue === 0) return null;
