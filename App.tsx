@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { identifyInput, fetchTransactionDetails, fetchPackageModules, fetchCoinMetadata, fetchRandomTransactionDigest } from './services/suiService';
+import { identifyInput, fetchTransactionDetails, fetchPackageModules, fetchCoinMetadataBatch, fetchRandomTransactionDigest } from './services/suiService';
+import { fetchAftermathCoinMetadatas } from './services/aftermathService';
 import { generateExplanation, generatePackageExplanation } from './services/geminiService';
 import { checkRateLimit, recordRequest } from './services/rateLimitService';
 import { resolveSuinsNames } from './services/suinsService';
@@ -76,17 +77,9 @@ const App: React.FC = () => {
         setLoadingStep('Sniffing the chain... 🐕');
         const txData = await fetchTransactionDetails(id);
         
-        setLoadingStep('Scaling token units... 🪙');
+        setLoadingStep('Fetching metadata & names... 🪙');
         const coinMetadata: Record<string, CoinMetadata> = {};
         const uniqueCoins = Array.from(new Set(txData.balanceChanges?.map(bc => bc.coinType) || []));
-
-        await Promise.all(uniqueCoins.map(async (coinType) => {
-          const meta = await fetchCoinMetadata(coinType);
-          if (meta) coinMetadata[coinType] = meta;
-        }));
-
-        // Resolve SuiNS names BEFORE generating explanation so AI can use them
-        setLoadingStep('Looking up SuiNS names... 🏷️');
         const addressesToResolve = [
           txData.transaction?.data.sender,
           txData.transaction?.data.gasData.owner,
@@ -96,7 +89,31 @@ const App: React.FC = () => {
           }) || [])
         ].filter((addr): addr is string => !!addr && addr.startsWith('0x'));
 
-        const suinsNames = await resolveSuinsNames(addressesToResolve);
+        // Fetch coin metadata AND SuiNS names in parallel (they don't depend on each other)
+        const [, suinsNames] = await Promise.all([
+          // Coin metadata: Aftermath as primary source, Sui RPC batch only for missing coins
+          (async () => {
+            const aftermathMeta = await fetchAftermathCoinMetadatas(uniqueCoins);
+            for (const [coinType, afMeta] of aftermathMeta) {
+              coinMetadata[coinType] = {
+                id: coinType,
+                name: afMeta.name,
+                symbol: afMeta.symbol,
+                decimals: afMeta.decimals,
+                description: '',
+                iconUrl: afMeta.iconUrl,
+              };
+            }
+            // Only call Sui RPC for coins Aftermath didn't cover (single batch request)
+            const missingCoins = uniqueCoins.filter(c => !aftermathMeta.has(c));
+            if (missingCoins.length > 0) {
+              const rpcMeta = await fetchCoinMetadataBatch(missingCoins);
+              Object.assign(coinMetadata, rpcMeta);
+            }
+          })(),
+          // SuiNS names - runs in parallel with coin metadata
+          resolveSuinsNames(addressesToResolve)
+        ]);
 
         setLoadingStep('Brewing the story... ☕');
         const explanation = await generateExplanation(txData, coinMetadata, suinsNames);

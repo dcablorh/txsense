@@ -59,6 +59,55 @@ export const fetchCoinMetadata = async (coinType: string): Promise<CoinMetadata 
   return null;
 };
 
+export const fetchCoinMetadataBatch = async (coinTypes: string[]): Promise<Record<string, CoinMetadata>> => {
+  const result: Record<string, CoinMetadata> = {};
+  const uncached: string[] = [];
+
+  for (const coinType of coinTypes) {
+    if (metadataCache.has(coinType)) {
+      result[coinType] = metadataCache.get(coinType)!;
+    } else {
+      uncached.push(coinType);
+    }
+  }
+
+  if (uncached.length === 0) return result;
+
+  try {
+    // Single batch JSON-RPC request for all coins at once
+    const response = await fetch(SUI_RPC_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(uncached.map((coinType, i) => ({
+        jsonrpc: '2.0',
+        id: i,
+        method: 'sui_getCoinMetadata',
+        params: [coinType]
+      })))
+    });
+
+    const responses: any[] = await response.json();
+    if (Array.isArray(responses)) {
+      for (let i = 0; i < uncached.length; i++) {
+        const data = responses.find((r: any) => r.id === i);
+        if (data?.result) {
+          const meta = { ...data.result, id: uncached[i] };
+          metadataCache.set(uncached[i], meta);
+          result[uncached[i]] = meta;
+        }
+      }
+    }
+  } catch {
+    // Fallback to individual requests if batch isn't supported
+    await Promise.all(uncached.map(async (coinType) => {
+      const meta = await fetchCoinMetadata(coinType);
+      if (meta) result[coinType] = meta;
+    }));
+  }
+
+  return result;
+};
+
 export const fetchPackageModules = async (packageId: string): Promise<any> => {
   const response = await fetch(SUI_RPC_URL, {
     method: 'POST',

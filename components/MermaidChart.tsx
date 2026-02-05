@@ -19,6 +19,7 @@ const MermaidChart: React.FC<MermaidChartProps> = ({ chart }) => {
           startOnLoad: false,
           theme: 'base',
           securityLevel: 'loose',
+          suppressErrors: true,
           themeVariables: {
             fontFamily: 'Fredoka, sans-serif',
             primaryColor: '#ffffff',
