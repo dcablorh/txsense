@@ -32,6 +32,7 @@ const TransactionResult: React.FC<TransactionResultProps> = ({
     actionType,
     technicalPlayByPlay,
     involvedParties,
+    senderSuinsName,
   } = result;
 
   const gas = raw.effects
@@ -85,8 +86,9 @@ const TransactionResult: React.FC<TransactionResultProps> = ({
                 target="_blank"
                 rel="noopener noreferrer"
                 className="bg-slate-100 px-2 sm:px-4 py-1 sm:py-2 rounded-lg sm:rounded-xl border-2 border-[#1a1a1a] font-black text-[7px] sm:text-sm hover:bg-slate-200 transition-colors inline-block"
+                title={sender}
               >
-                👤 {shortenAddr(sender)}
+                👤 {senderSuinsName || shortenAddr(sender)}
               </a>
             )}
           </div>
@@ -216,9 +218,10 @@ const TransactionResult: React.FC<TransactionResultProps> = ({
                         href={`https://suivision.xyz/account/${party.address}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-[7px] sm:text-sm font-mono font-bold text-slate-400 hover:text-[#2AC2FF] transition-colors break-all"
+                        className={`text-[7px] sm:text-sm font-bold hover:text-[#2AC2FF] transition-colors ${party.suinsName ? 'text-[#9B6DFF]' : 'font-mono text-slate-400 break-all'}`}
+                        title={party.address}
                       >
-                        {party.address}
+                        {party.suinsName || party.address}
                       </a>
                     </td>
                   </tr>
